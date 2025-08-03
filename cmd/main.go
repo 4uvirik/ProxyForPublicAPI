@@ -2,10 +2,15 @@ package main
 
 import (
 	"github.com/4uvirik/ProxyForPublicAPI/config"
-	"github.com/4uvirik/ProxyForPublicAPI/intrnal/logger/handler/slogpretty"
+	"github.com/4uvirik/ProxyForPublicAPI/internal/client"
+	"github.com/4uvirik/ProxyForPublicAPI/internal/handlers"
+	"github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogpretty"
+	"github.com/4uvirik/ProxyForPublicAPI/internal/server"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 )
 
 const (
@@ -24,6 +29,21 @@ func main() {
 	}
 
 	logger.Debug("configuration reading success", slog.Any("cfg", cfg))
+
+	httpClient := &http.Client{
+		Timeout: time.Duration(5 * time.Second),
+	}
+
+	cli := &client.Client{
+		Client: httpClient,
+		URL:    "https://jsonplaceholder.typicode.com",
+	}
+
+	h := &handlers.Handler{
+		Client: cli,
+	}
+
+	server.Run(h)
 }
 
 func configLogger(logLevel string) (*slog.Logger, error) {
