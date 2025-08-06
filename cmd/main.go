@@ -31,12 +31,16 @@ func main() {
 	logger.Debug("configuration reading success", slog.Any("cfg", cfg))
 
 	httpClient := &http.Client{
-		Timeout: time.Duration(5 * time.Second),
+		Timeout: time.Duration(cfg.HTTPClient.Timeout) * time.Second,
 	}
 
 	cli := &client.Client{
-		Client: httpClient,
-		URL:    "https://jsonplaceholder.typicode.com",
+		Client:         httpClient,
+		URL:            cfg.HTTPClient.JsonPlaceholderUrl,
+		RetryCount:     cfg.HTTPClient.RetryCount,
+		RetryWaitMs:    cfg.HTTPClient.RetryWaitMs,
+		RetryMaxWaitMs: cfg.HTTPClient.RetryMaxWaitMs,
+		RetryBackOff:   cfg.HTTPClient.RetryBackOff,
 	}
 
 	h := &handlers.Handler{

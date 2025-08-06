@@ -34,7 +34,7 @@ type HTTPClientConfig struct {
 	RetryCount         int    `env:"HTTP_RETRY_COUNT" envDefault:"3"`
 	RetryWaitMs        int    `env:"HTTP_RETRY_WAIT_MS" envDefault:"200"`
 	RetryMaxWaitMs     int    `env:"HTTP_RETRY_MAX_WAIT_MS" envDefault:"2000"`
-	RetryBachOff       string `env:"HTTP_RETRY_BACKOFF" envDefault:"exponential"`
+	RetryBackOff       string `env:"HTTP_RETRY_BACKOFF" envDefault:"exponential"`
 }
 
 func MustNew() *Config {

@@ -2,14 +2,20 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
-	"log/slog"
+	"math"
 	"net/http"
+	"time"
 )
 
 type Client struct {
-	Client *http.Client
-	URL    string
+	Client         *http.Client
+	URL            string
+	RetryCount     int
+	RetryWaitMs    int
+	RetryMaxWaitMs int
+	RetryBackOff   string
 }
 
 type Resp struct {
@@ -18,37 +24,50 @@ type Resp struct {
 	Body  string `json:"body"`
 }
 
+const UrlEndPointPosts = "/posts"
+
 func (c *Client) GetPosts() ([]Resp, error) {
 
-	url := c.URL + "/posts"
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		slog.Error("bad NewRequest", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		slog.Error("хуй знает2", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		slog.Error("Invalid response code", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		slog.Error("cant read:", err)
-	}
-
+	url := c.URL + UrlEndPointPosts
 	var response []Resp
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		slog.Error("bad Unmarshal", err)
+
+	for i := 1; i <= c.RetryCount; i++ {
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error creating request: %w", err)
+		}
+
+		resp, err := c.Client.Do(req)
+		if err == nil {
+			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil {
+				return nil, fmt.Errorf("error read body: %w", err)
+			}
+
+			err = json.Unmarshal(body, &response)
+			if err != nil {
+				return nil, fmt.Errorf("error unmarshal body: %w", err)
+			}
+
+			return response, nil
+		}
+
+		if i < c.RetryCount {
+			var wait time.Duration
+			if c.RetryBackOff == "exponential" {
+				waitMs := math.Min(
+					float64(c.RetryWaitMs)*math.Pow(2, float64(i)),
+					float64(c.RetryMaxWaitMs),
+				)
+				wait = time.Duration(waitMs) * time.Millisecond
+			} else {
+				wait = time.Duration(c.RetryWaitMs) * time.Millisecond
+			}
+			time.Sleep(wait)
+		}
 	}
 
-	return response, nil
+	return nil, fmt.Errorf("fail after %d retries", c.RetryCount)
 }
