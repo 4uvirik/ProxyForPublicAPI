@@ -35,6 +35,10 @@ func (c *Client) GetPosts() ([]Resp, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		slog.Error("Invalid response code", resp.StatusCode)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		slog.Error("cant read:", err)
@@ -44,10 +48,6 @@ func (c *Client) GetPosts() ([]Resp, error) {
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		slog.Error("bad Unmarshal", err)
-	}
-
-	if resp.StatusCode != 200 {
-		slog.Error("Invalid response code", resp.StatusCode)
 	}
 
 	return response, nil
