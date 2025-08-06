@@ -36,6 +36,7 @@ func main() {
 
 	cli := &client.Client{
 		Client:         httpClient,
+		Logger:         logger,
 		URL:            cfg.HTTPClient.JsonPlaceholderUrl,
 		RetryCount:     cfg.HTTPClient.RetryCount,
 		RetryWaitMs:    cfg.HTTPClient.RetryWaitMs,
@@ -45,9 +46,10 @@ func main() {
 
 	h := &handlers.Handler{
 		Client: cli,
+		Logger: logger,
 	}
 
-	server.Run(cfg, h)
+	server.Run(cfg, h, logger)
 }
 
 func configLogger(logLevel string) (*slog.Logger, error) {

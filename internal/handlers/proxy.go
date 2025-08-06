@@ -3,11 +3,13 @@ package handlers
 import (
 	"github.com/4uvirik/ProxyForPublicAPI/internal/client"
 	"github.com/labstack/echo/v4"
+	"log/slog"
 	"net/http"
 )
 
 type Handler struct {
 	Client *client.Client
+	Logger *slog.Logger
 }
 
 func (h *Handler) Proxy(c echo.Context) error {
