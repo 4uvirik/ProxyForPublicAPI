@@ -43,7 +43,7 @@ func main() {
 		Client: cli,
 	}
 
-	server.Run(h)
+	server.Run(cfg, h)
 }
 
 func configLogger(logLevel string) (*slog.Logger, error) {
