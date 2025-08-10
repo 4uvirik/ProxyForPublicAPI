@@ -6,6 +6,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const PostIDParam = "/:id"
+
 func InitRoutes(e *echo.Echo, h *handlers.Handler) {
-	e.GET(client.UrlEndPointPosts, h.Proxy)
+	e.GET(client.UrlEndPointPosts+PostIDParam, h.Proxy)
 }

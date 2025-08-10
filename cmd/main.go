@@ -8,9 +8,7 @@ import (
 	"github.com/4uvirik/ProxyForPublicAPI/internal/server"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
-	"time"
 )
 
 const (
@@ -30,26 +28,16 @@ func main() {
 
 	logger.Debug("configuration reading success", slog.Any("cfg", cfg))
 
-	httpClient := &http.Client{
-		Timeout: time.Duration(cfg.HTTPClient.Timeout) * time.Second,
-	}
-
-	cli := &client.Client{
-		Client:         httpClient,
-		Logger:         logger,
-		URL:            cfg.HTTPClient.JsonPlaceholderUrl,
-		RetryCount:     cfg.HTTPClient.RetryCount,
-		RetryWaitMs:    cfg.HTTPClient.RetryWaitMs,
-		RetryMaxWaitMs: cfg.HTTPClient.RetryMaxWaitMs,
-		RetryBackOff:   cfg.HTTPClient.RetryBackOff,
-	}
+	cli := client.NewClient(cfg, logger)
 
 	h := &handlers.Handler{
 		Client: cli,
 		Logger: logger,
+		Config: cfg,
 	}
 
 	server.Run(cfg, h, logger)
+
 }
 
 func configLogger(logLevel string) (*slog.Logger, error) {

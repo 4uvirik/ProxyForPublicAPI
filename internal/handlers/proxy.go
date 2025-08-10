@@ -1,22 +1,44 @@
 package handlers
 
 import (
+	"context"
+	"github.com/4uvirik/ProxyForPublicAPI/config"
 	"github.com/4uvirik/ProxyForPublicAPI/internal/client"
 	"github.com/labstack/echo/v4"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 type Handler struct {
 	Client *client.Client
 	Logger *slog.Logger
+	Config *config.Config
 }
 
 func (h *Handler) Proxy(c echo.Context) error {
 
-	posts, err := h.Client.GetPosts()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed GetPost"})
+	ctx, cancel := context.WithTimeout(c.Request().Context(), time.Duration(h.Config.HTTPClient.Timeout)*time.Second)
+	defer cancel()
+
+	postIDStr := c.Param("id")
+	if postIDStr == "" {
+		h.Logger.Warn("no found ID in post")
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Post ID required"})
 	}
-	return c.JSON(http.StatusOK, posts)
+
+	postID, err := strconv.Atoi(postIDStr)
+	if err != nil {
+		h.Logger.Warn("invalid ID format", "postID", postIDStr)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Post ID must be number"})
+	}
+
+	post, err := h.Client.GetPost(ctx, postID)
+	if err != nil {
+		h.Logger.Error("failed to get post", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get post"})
+	}
+
+	return c.JSON(http.StatusOK, post)
 }

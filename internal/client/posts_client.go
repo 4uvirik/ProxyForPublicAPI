@@ -1,23 +1,17 @@
 package client
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
+	"github.com/4uvirik/ProxyForPublicAPI/config"
+	"github.com/go-resty/resty/v2"
 	"log/slog"
-	"math"
-	"net/http"
 	"time"
 )
 
 type Client struct {
-	Client         *http.Client
-	Logger         *slog.Logger
-	URL            string
-	RetryCount     int
-	RetryWaitMs    int
-	RetryMaxWaitMs int
-	RetryBackOff   string
+	resty  *resty.Client
+	logger *slog.Logger
 }
 
 type Resp struct {
@@ -28,68 +22,54 @@ type Resp struct {
 
 const UrlEndPointPosts = "/posts"
 
-func (c *Client) GetPosts() ([]Resp, error) {
+func NewClient(cfg *config.Config, logger *slog.Logger) *Client {
+	client := resty.New().
+		SetRetryCount(cfg.HTTPClient.RetryCount).
+		SetRetryWaitTime(time.Duration(cfg.HTTPClient.RetryWaitMs)*time.Millisecond).
+		SetRetryMaxWaitTime(time.Duration(cfg.HTTPClient.RetryMaxWaitMs)*time.Millisecond).
+		SetBaseURL(cfg.HTTPClient.JsonPlaceholderUrl).
+		SetHeader("Accept", "application/json").
+		// Лог перед запросом - отправка
+		OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
+			logger.Info("send HTTP request",
+				slog.String("method", r.Method),
+				slog.String("URL", r.URL))
+			return nil
+		}).
+		// Лог после ответа - результат
+		OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
+			logger.Info("received HTTP response",
+				slog.Int("status code", r.StatusCode()),
+				slog.String("body", r.String()))
+			return nil
+		})
 
-	url := c.URL + UrlEndPointPosts
-	var response []Resp
+	return &Client{
+		resty:  client,
+		logger: logger,
+	}
+}
 
-	c.Logger.Info("sending request to API",
-		slog.String("url", url),
-		slog.Int("retry count", c.RetryCount),
-		slog.String("retry backOff", c.RetryBackOff),
-	)
+func (c *Client) GetPost(ctx context.Context, postID int) (*Resp, error) {
 
-	for i := 1; i <= c.RetryCount; i++ {
+	var response Resp
+	url := fmt.Sprintf("%s/%v", UrlEndPointPosts, postID)
 
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return nil, fmt.Errorf("error creating request: %w", err)
-		}
-
-		resp, err := c.Client.Do(req)
-		if err == nil {
-			body, err := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			if err != nil {
-				return nil, fmt.Errorf("error read body: %w", err)
-			}
-
-			err = json.Unmarshal(body, &response)
-			if err != nil {
-				return nil, fmt.Errorf("error unmarshal body: %w", err)
-			}
-
-			return response, nil
-		}
-
-		c.Logger.Warn("Request failed. Retry if possible",
-			slog.Int("attempt", i),
-			slog.Int("retry count", c.RetryCount),
-			slog.Any("error", err),
-		)
-
-		if i < c.RetryCount {
-			var wait time.Duration
-			if c.RetryBackOff == "exponential" {
-				waitMs := math.Min(
-					float64(c.RetryWaitMs)*math.Pow(2, float64(i)),
-					float64(c.RetryMaxWaitMs),
-				)
-				wait = time.Duration(waitMs) * time.Millisecond
-			} else {
-				wait = time.Duration(c.RetryWaitMs) * time.Millisecond
-			}
-
-			c.Logger.Debug("Wait before next try",
-				slog.Duration("wait", wait))
-
-			time.Sleep(wait)
-		}
+	resp, err := c.resty.R().
+		SetContext(ctx).
+		SetResult(&response).
+		Get(url)
+	if err != nil {
+		c.logger.Error("request failed",
+			slog.Any("error", err))
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	c.Logger.Error("request failed after all tries",
-		slog.Int("retry count", c.RetryCount),
-	)
+	if !resp.IsSuccess() {
+		c.logger.Error("unexpected status code",
+			slog.Int("status code", resp.StatusCode()))
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	}
 
-	return nil, fmt.Errorf("fail after %d retries", c.RetryCount)
+	return &response, nil
 }
