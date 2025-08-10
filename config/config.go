@@ -15,17 +15,12 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host         string `env:"SERVER_HOST"`
-	Port         string `env:"SERVER_PORT"`
-	Env          string `env:"SERVER_ENV" envDefault:"development"`
-	ReadTimeout  int    `env:"SERVER_READ_TIMEOUT" envDefault:"5"`
-	WriteTimeout int    `env:"SERVER_WRITE_TIMEOUT" envDefault:"5"`
-	IdleTimeout  int    `env:"SERVER_IDLE_TIMEOUT" envDefault:"10"`
+	Host string `env:"SERVER_HOST"`
+	Port string `env:"SERVER_PORT"`
 }
 
 type LoggerConfig struct {
-	Level  string `env:"LOG_LEVEL" envDefault:"info"`
-	Format string `env:"LOG_FORMAT" envDefault:"json"`
+	Level string `env:"LOG_LEVEL" envDefault:"info"`
 }
 
 type HTTPClientConfig struct {
@@ -34,7 +29,6 @@ type HTTPClientConfig struct {
 	RetryCount         int    `env:"HTTP_RETRY_COUNT" envDefault:"3"`
 	RetryWaitMs        int    `env:"HTTP_RETRY_WAIT_MS" envDefault:"200"`
 	RetryMaxWaitMs     int    `env:"HTTP_RETRY_MAX_WAIT_MS" envDefault:"2000"`
-	RetryBackOff       string `env:"HTTP_RETRY_BACKOFF" envDefault:"exponential"`
 }
 
 func MustNew() *Config {
