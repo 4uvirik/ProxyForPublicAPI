@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -24,11 +25,11 @@ type LoggerConfig struct {
 }
 
 type HTTPClientConfig struct {
-	JsonPlaceholderUrl string `env:"JSONPLACEHOLDER_URL"`
-	Timeout            int    `env:"HTTP_CLIENT_TIMEOUT" envDefault:"10"`
-	RetryCount         int    `env:"HTTP_RETRY_COUNT" envDefault:"3"`
-	RetryWaitMs        int    `env:"HTTP_RETRY_WAIT_MS" envDefault:"200"`
-	RetryMaxWaitMs     int    `env:"HTTP_RETRY_MAX_WAIT_MS" envDefault:"2000"`
+	JsonPlaceholderUrl string        `env:"JSONPLACEHOLDER_URL"`
+	Timeout            time.Duration `env:"HTTP_CLIENT_TIMEOUT" envDefault:"10s"`
+	RetryCount         int           `env:"HTTP_RETRY_COUNT" envDefault:"3"`
+	RetryWait          time.Duration `env:"HTTP_RETRY_WAIT" envDefault:"200ms"`
+	RetryMaxWait       time.Duration `env:"HTTP_RETRY_MAX_WAIT" envDefault:"2000ms"`
 }
 
 func MustNew() *Config {
@@ -61,5 +62,5 @@ func (cfg *Config) Validate() error {
 		errorsMsg = append(errorsMsg, "invalid client jsonPlaceholderUrl")
 	}
 
-	return fmt.Errorf(strings.Join(errorsMsg, "\n"))
+	return fmt.Errorf(strings.Join(errorsMsg, ":"))
 }
