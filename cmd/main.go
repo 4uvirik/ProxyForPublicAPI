@@ -12,7 +12,14 @@ import (
 
 func main() {
 
-	cfg := config.MustNew()
+	cfg, err := config.MustNew("config/config.yaml")
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("config validate failed: %v", err)
+	}
 
 	logger, err := logger.ConfigLogger(cfg.Logger.Level)
 	if err != nil {
