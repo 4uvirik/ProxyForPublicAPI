@@ -4,46 +4,71 @@ import (
 	"fmt"
 	"github.com/caarlos0/env/v10"
 	"github.com/joho/godotenv"
-	"log"
+	"gopkg.in/yaml.v3"
+	"os"
 	"strings"
 	"time"
 )
 
 type Config struct {
-	Server     ServerConfig     `json:"server"`
-	Logger     LoggerConfig     `json:"logger"`
-	HTTPClient HTTPClientConfig `json:"HTTPClient"`
+	Server     ServerConfig     `yaml:"server"`
+	Logger     LoggerConfig     `yaml:"logger"`
+	HTTPClient HTTPClientConfig `yaml:"http_client"`
 }
 
 type ServerConfig struct {
-	Host string `env:"SERVER_HOST"`
-	Port string `env:"SERVER_PORT"`
+	Host string `yaml:"host" env:"SERVER_HOST"`
+	Port string `yaml:"port" env:"SERVER_PORT"`
 }
 
 type LoggerConfig struct {
-	Level string `env:"LOG_LEVEL" envDefault:"info"`
+	Level string `yaml:"level" env:"LOG_LEVEL" envDefault:"info"`
 }
 
 type HTTPClientConfig struct {
-	JsonPlaceholderUrl string        `env:"JSONPLACEHOLDER_URL"`
-	Timeout            time.Duration `env:"HTTP_CLIENT_TIMEOUT" envDefault:"10s"`
-	RetryCount         int           `env:"HTTP_RETRY_COUNT" envDefault:"3"`
-	RetryWait          time.Duration `env:"HTTP_RETRY_WAIT" envDefault:"200ms"`
-	RetryMaxWait       time.Duration `env:"HTTP_RETRY_MAX_WAIT" envDefault:"2000ms"`
+	JsonPlaceholderUrl string        `yaml:"json_placeholder_url" env:"JSON_PLACEHOLDER_URL"`
+	Timeout            time.Duration `yaml:"timeout" env:"HTTP_CLIENT_TIMEOUT" envDefault:"10s"`
+	RetryCount         int           `yaml:"retry_count" env:"HTTP_RETRY_COUNT" envDefault:"3"`
+	RetryWait          time.Duration `yaml:"retry_wait" env:"HTTP_RETRY_WAIT" envDefault:"200ms"`
+	RetryMaxWait       time.Duration `yaml:"retry_max_wait" env:"HTTP_RETRY_MAX_WAIT" envDefault:"2000ms"`
 }
 
-func MustNew() *Config {
-
-	config := Config{}
+func loadFromEnv(config *Config) error {
 
 	if err := godotenv.Load(".env"); err != nil {
-		log.Println("Warning: Error loading .env file, fallback to system ENV")
+		return fmt.Errorf("cant load env file: %w", err)
+	}
+	if err := env.Parse(config); err != nil {
+		return fmt.Errorf("error to parse env in config: %w", err)
+	}
+	return nil
+}
+
+func loadFromYaml(path string, config *Config) error {
+	date, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read yaml file: %w", err)
 	}
 
-	if err := env.Parse(&config); err != nil {
-		log.Fatal("Failed to parse env vars into config")
+	if err := yaml.Unmarshal(date, config); err != nil {
+		return fmt.Errorf("cant yaml unmarshal: %w", err)
 	}
-	return &config
+	return nil
+}
+
+func MustNew(yamlPath string) (*Config, error) {
+
+	config := &Config{}
+
+	if err := loadFromEnv(config); err == nil {
+		return config, nil
+	}
+
+	if err := loadFromYaml(yamlPath, config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }
 
 func (cfg *Config) Validate() error {
@@ -62,5 +87,8 @@ func (cfg *Config) Validate() error {
 		errorsMsg = append(errorsMsg, "invalid client jsonPlaceholderUrl")
 	}
 
-	return fmt.Errorf(strings.Join(errorsMsg, ":"))
+	if len(errorsMsg) > 0 {
+		return fmt.Errorf(strings.Join(errorsMsg, ": "))
+	}
+	return nil
 }
