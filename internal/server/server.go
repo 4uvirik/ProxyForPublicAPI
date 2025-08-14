@@ -8,10 +8,18 @@ import (
 	"log/slog"
 )
 
-func Run(cfg *config.Config, handler *handlers.Handler, logger *slog.Logger) {
+func SetupRouts(handler *handlers.Handler) *echo.Echo {
+
 	e := echo.New()
 
 	routes.InitRoutes(e, handler)
+
+	return e
+}
+
+func Run(cfg *config.Config, handler *handlers.Handler, logger *slog.Logger) {
+
+	e := SetupRouts(handler)
 
 	address := cfg.Server.Host + ":" + cfg.Server.Port
 	logger.Info("start server", slog.String("address", address))
