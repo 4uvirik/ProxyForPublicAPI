@@ -88,7 +88,7 @@ func (cfg *Config) Validate() error {
 	}
 
 	if len(errorsMsg) > 0 {
-		return fmt.Errorf(strings.Join(errorsMsg, ": "))
+		return fmt.Errorf("%s", strings.Join(errorsMsg, ": "))
 	}
 	return nil
 }

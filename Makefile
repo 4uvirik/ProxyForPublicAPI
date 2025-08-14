@@ -1,10 +1,7 @@
 APP_NAME := Proxy for public API
 ENTRYPOINT := cmd/main.go
 
-.PHONY: docs tests cover
-
-docs:
-	swag init -g $(ENTRYPOINT)
+.PHONY: tests cover
 
 tests:
 	go test ./... -coverprofile=covarage.out

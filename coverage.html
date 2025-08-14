@@ -1,0 +1,622 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>cmd: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/4uvirik/ProxyForPublicAPI/cmd/main.go (0.0%)</option>
+				
+				<option value="file1">github.com/4uvirik/ProxyForPublicAPI/config/config.go (0.0%)</option>
+				
+				<option value="file2">github.com/4uvirik/ProxyForPublicAPI/internal/client/posts_client.go (0.0%)</option>
+				
+				<option value="file3">github.com/4uvirik/ProxyForPublicAPI/internal/handlers/proxy.go (0.0%)</option>
+				
+				<option value="file4">github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogdiscard/logger.go (0.0%)</option>
+				
+				<option value="file5">github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogpretty/logger.go (0.0%)</option>
+				
+				<option value="file6">github.com/4uvirik/ProxyForPublicAPI/internal/logger/logger.go (0.0%)</option>
+				
+				<option value="file7">github.com/4uvirik/ProxyForPublicAPI/internal/logger/sl/error.go (0.0%)</option>
+				
+				<option value="file8">github.com/4uvirik/ProxyForPublicAPI/internal/routes/routes.go (0.0%)</option>
+				
+				<option value="file9">github.com/4uvirik/ProxyForPublicAPI/internal/server/server.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "github.com/4uvirik/ProxyForPublicAPI/config"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/client"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/handlers"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/logger"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/server"
+        "log"
+        "log/slog"
+        "os"
+)
+
+func main() <span class="cov0" title="0">{
+
+        yamlPath := os.Getenv("YAML_PATH")
+        if yamlPath == "" </span><span class="cov0" title="0">{
+                yamlPath = "config/config.yaml"
+        }</span>
+
+        <span class="cov0" title="0">cfg, err := config.LoadConfig(yamlPath)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("failed to load config: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := cfg.Validate(); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("config validate failed: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">logger, err := logger.ConfigLogger(cfg.Logger.Level)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("error creating logger: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">logger.Debug("configuration reading success", slog.Any("cfg", cfg))
+
+        cli := client.NewClient(cfg, logger)
+
+        h := &amp;handlers.Handler{
+                Client: cli,
+                Logger: logger,
+                Config: cfg,
+        }
+
+        server.Run(cfg, h, logger)</span>
+
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "fmt"
+        "github.com/caarlos0/env/v10"
+        "github.com/joho/godotenv"
+        "gopkg.in/yaml.v3"
+        "os"
+        "strings"
+        "time"
+)
+
+type Config struct {
+        Server     ServerConfig     `yaml:"server"`
+        Logger     LoggerConfig     `yaml:"logger"`
+        HTTPClient HTTPClientConfig `yaml:"http_client"`
+}
+
+type ServerConfig struct {
+        Host string `yaml:"host" env:"SERVER_HOST"`
+        Port string `yaml:"port" env:"SERVER_PORT"`
+}
+
+type LoggerConfig struct {
+        Level string `yaml:"level" env:"LOG_LEVEL" envDefault:"info"`
+}
+
+type HTTPClientConfig struct {
+        JsonPlaceholderUrl string        `yaml:"json_placeholder_url" env:"JSON_PLACEHOLDER_URL"`
+        Timeout            time.Duration `yaml:"timeout" env:"HTTP_CLIENT_TIMEOUT" envDefault:"10s"`
+        RetryCount         int           `yaml:"retry_count" env:"HTTP_RETRY_COUNT" envDefault:"3"`
+        RetryWait          time.Duration `yaml:"retry_wait" env:"HTTP_RETRY_WAIT" envDefault:"200ms"`
+        RetryMaxWait       time.Duration `yaml:"retry_max_wait" env:"HTTP_RETRY_MAX_WAIT" envDefault:"2000ms"`
+}
+
+func loadFromEnv(config *Config) error <span class="cov0" title="0">{
+
+        if err := godotenv.Load(".env"); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("cant load env file: %w", err)
+        }</span>
+        <span class="cov0" title="0">if err := env.Parse(config); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error to parse env in config: %w", err)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func loadFromYaml(path string, config *Config) error <span class="cov0" title="0">{
+        date, err := os.ReadFile(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to read yaml file: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := yaml.Unmarshal(date, config); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("cant yaml unmarshal: %w", err)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func LoadConfig(yamlPath string) (*Config, error) <span class="cov0" title="0">{
+
+        config := &amp;Config{}
+
+        if err := loadFromEnv(config); err == nil </span><span class="cov0" title="0">{
+                return config, nil
+        }</span>
+
+        <span class="cov0" title="0">if err := loadFromYaml(yamlPath, config); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return config, nil</span>
+}
+
+func (cfg *Config) Validate() error <span class="cov0" title="0">{
+
+        var errorsMsg []string
+
+        if cfg.Server.Host == "" </span><span class="cov0" title="0">{
+                errorsMsg = append(errorsMsg, "invalid server host")
+        }</span>
+
+        <span class="cov0" title="0">if cfg.Server.Port == "" </span><span class="cov0" title="0">{
+                errorsMsg = append(errorsMsg, "invalid server port")
+        }</span>
+
+        <span class="cov0" title="0">if cfg.HTTPClient.JsonPlaceholderUrl == "" </span><span class="cov0" title="0">{
+                errorsMsg = append(errorsMsg, "invalid client jsonPlaceholderUrl")
+        }</span>
+
+        <span class="cov0" title="0">if len(errorsMsg) &gt; 0 </span><span class="cov0" title="0">{
+                return fmt.Errorf("%s", strings.Join(errorsMsg, ": "))
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package client
+
+import (
+        "context"
+        "fmt"
+        "github.com/4uvirik/ProxyForPublicAPI/config"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/logger/sl"
+        "github.com/go-resty/resty/v2"
+        "log/slog"
+)
+
+type Client struct {
+        resty  *resty.Client
+        logger *slog.Logger
+}
+
+type Resp struct {
+        ID    int    `json:"id"`
+        Title string `json:"title"`
+        Body  string `json:"body"`
+}
+
+const UrlEndPointPosts = "/posts"
+
+func NewClient(cfg *config.Config, logger *slog.Logger) *Client <span class="cov0" title="0">{
+        client := resty.New().
+                SetRetryCount(cfg.HTTPClient.RetryCount).
+                SetRetryWaitTime(cfg.HTTPClient.RetryWait).
+                SetRetryMaxWaitTime(cfg.HTTPClient.RetryMaxWait).
+                SetBaseURL(cfg.HTTPClient.JsonPlaceholderUrl).
+                SetHeader("Accept", "application/json").
+
+                // Лог после завершения запроса - результат
+                OnAfterResponse(func(c *resty.Client, r *resty.Response) error </span><span class="cov0" title="0">{
+                        logger.Info("complete HTTP request",
+                                slog.String("method", r.Request.Method),
+                                slog.String("URL", r.Request.URL),
+                                slog.Int("status code", r.StatusCode()),
+                                slog.String("requestBody", fmt.Sprintf("%s", r.Request.Body)),
+                                slog.String("responseBody", string(r.Body())))
+                        return nil
+                }</span>)
+
+        <span class="cov0" title="0">return &amp;Client{
+                resty:  client,
+                logger: logger,
+        }</span>
+}
+
+func (c *Client) GetPost(ctx context.Context, postID int) (*Resp, error) <span class="cov0" title="0">{
+        var response Resp
+        url := fmt.Sprintf("%s/%v", UrlEndPointPosts, postID)
+
+        resp, err := c.resty.R().
+                SetContext(ctx).
+                SetResult(&amp;response).
+                Get(url)
+        if err != nil </span><span class="cov0" title="0">{
+                c.logger.Error("request failed", sl.Err(err))
+                return nil, fmt.Errorf("request failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if !resp.IsSuccess() </span><span class="cov0" title="0">{
+                c.logger.Error("unexpected status code", sl.Err(err))
+                return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+        }</span>
+
+        <span class="cov0" title="0">return &amp;response, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package handlers
+
+import (
+        "context"
+        "github.com/4uvirik/ProxyForPublicAPI/config"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/client"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/logger/sl"
+        "github.com/labstack/echo/v4"
+        "log/slog"
+        "net/http"
+        "strconv"
+)
+
+type Handler struct {
+        Client *client.Client
+        Logger *slog.Logger
+        Config *config.Config
+}
+
+type ErrorResponse struct {
+        Message string `json:"message"`
+}
+
+func (h *Handler) Proxy(c echo.Context) error <span class="cov0" title="0">{
+
+        ctx, cancel := context.WithTimeout(c.Request().Context(), h.Config.HTTPClient.Timeout)
+        defer cancel()
+
+        postIDStr := c.Param("id")
+        if postIDStr == "" </span><span class="cov0" title="0">{
+                h.Logger.Warn("no found ID in post")
+                return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Post ID required"})
+        }</span>
+
+        <span class="cov0" title="0">postID, err := strconv.Atoi(postIDStr)
+        if err != nil </span><span class="cov0" title="0">{
+                h.Logger.Warn("invalid ID format", "postID", postIDStr)
+                return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Post ID must be number"})
+        }</span>
+
+        <span class="cov0" title="0">post, err := h.Client.GetPost(ctx, postID)
+        if err != nil </span><span class="cov0" title="0">{
+                h.Logger.Error("failed to get post", sl.Err(err))
+                return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "failed to get post"})
+        }</span>
+
+        <span class="cov0" title="0">return c.JSON(http.StatusOK, post)</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package slogdiscard
+
+import (
+        "context"
+        "log/slog"
+)
+
+func NewDiscardLogger() *slog.Logger <span class="cov0" title="0">{
+        return slog.New(NewDiscardHandler())
+}</span>
+
+type DiscardHandler struct{}
+
+func NewDiscardHandler() *DiscardHandler <span class="cov0" title="0">{
+        return &amp;DiscardHandler{}
+}</span>
+
+func (h *DiscardHandler) Handle(_ context.Context, _ slog.Record) error <span class="cov0" title="0">{
+        // Просто игнорируем запись журнала
+        return nil
+}</span>
+
+func (h *DiscardHandler) WithAttrs(_ []slog.Attr) slog.Handler <span class="cov0" title="0">{
+        // Возвращает тот же обработчик, так как нет атрибутов для сохранения
+        return h
+}</span>
+
+func (h *DiscardHandler) WithGroup(_ string) slog.Handler <span class="cov0" title="0">{
+        // Возвращает тот же обработчик, так как нет группы для сохранения
+        return h
+}</span>
+
+func (h *DiscardHandler) Enabled(_ context.Context, _ slog.Level) bool <span class="cov0" title="0">{
+        // Всегда возвращает false, так как запись журнала игнорируется
+        return false
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package slogpretty
+
+import (
+        "context"
+        "encoding/json"
+        "io"
+        stdLog "log"
+        "log/slog"
+
+        "github.com/fatih/color"
+)
+
+type PrettyHandlerOptions struct {
+        SlogOpts *slog.HandlerOptions
+}
+
+type PrettyHandler struct {
+        slog.Handler
+        l     *stdLog.Logger
+        attrs []slog.Attr
+}
+
+func (opts PrettyHandlerOptions) NewPrettyHandler(
+        out io.Writer,
+) *PrettyHandler <span class="cov0" title="0">{
+        h := &amp;PrettyHandler{
+                Handler: slog.NewJSONHandler(out, opts.SlogOpts),
+                l:       stdLog.New(out, "", 0),
+        }
+
+        return h
+}</span>
+
+func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error <span class="cov0" title="0">{
+        level := r.Level.String() + ":"
+
+        switch r.Level </span>{
+        case slog.LevelDebug:<span class="cov0" title="0">
+                level = color.MagentaString(level)</span>
+        case slog.LevelInfo:<span class="cov0" title="0">
+                level = color.BlueString(level)</span>
+        case slog.LevelWarn:<span class="cov0" title="0">
+                level = color.YellowString(level)</span>
+        case slog.LevelError:<span class="cov0" title="0">
+                level = color.RedString(level)</span>
+        }
+
+        <span class="cov0" title="0">fields := make(map[string]interface{}, r.NumAttrs())
+
+        r.Attrs(func(a slog.Attr) bool </span><span class="cov0" title="0">{
+                fields[a.Key] = a.Value.Any()
+
+                return true
+        }</span>)
+
+        <span class="cov0" title="0">for _, a := range h.attrs </span><span class="cov0" title="0">{
+                fields[a.Key] = a.Value.Any()
+        }</span>
+
+        <span class="cov0" title="0">var b []byte
+        var err error
+
+        if len(fields) &gt; 0 </span><span class="cov0" title="0">{
+                b, err = json.MarshalIndent(fields, "", "  ")
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        }
+
+        <span class="cov0" title="0">timeStr := r.Time.Format("[15:05:05.000]")
+        msg := color.CyanString(r.Message)
+
+        h.l.Println(
+                timeStr,
+                level,
+                msg,
+                color.WhiteString(string(b)),
+        )
+
+        return nil</span>
+}
+
+func (h *PrettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler <span class="cov0" title="0">{
+        return &amp;PrettyHandler{
+                Handler: h.Handler,
+                l:       h.l,
+                attrs:   attrs,
+        }
+}</span>
+
+func (h *PrettyHandler) WithGroup(name string) slog.Handler <span class="cov0" title="0">{
+        return &amp;PrettyHandler{
+                Handler: h.Handler.WithGroup(name),
+                l:       h.l,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package logger
+
+import (
+        "github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogpretty"
+        "log/slog"
+        "os"
+)
+
+const (
+        envLocal = "local"
+        envDev   = "dev"
+        envProd  = "prod"
+)
+
+func ConfigLogger(logLevel string) (*slog.Logger, error) <span class="cov0" title="0">{
+        var log *slog.Logger
+
+        switch logLevel </span>{
+        case envLocal:<span class="cov0" title="0">
+                log = setupPrettySlog()</span>
+        case envDev:<span class="cov0" title="0">
+                log = slog.New(
+                        slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{Level: slog.LevelDebug, AddSource: true}),
+                )</span>
+        case envProd:<span class="cov0" title="0">
+                log = slog.New(
+                        slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{Level: slog.LevelInfo}),
+                )</span>
+        default:<span class="cov0" title="0">
+                log = slog.New(
+                        slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{Level: slog.LevelInfo}),
+                )</span>
+        }
+
+        <span class="cov0" title="0">return log, nil</span>
+}
+
+func setupPrettySlog() *slog.Logger <span class="cov0" title="0">{
+        opts := slogpretty.PrettyHandlerOptions{
+                SlogOpts: &amp;slog.HandlerOptions{
+                        Level:     slog.LevelDebug,
+                        AddSource: true,
+                },
+        }
+
+        handler := opts.NewPrettyHandler(os.Stdout)
+
+        return slog.New(handler)
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package sl
+
+import (
+        "log/slog"
+)
+
+func Err(err error) slog.Attr <span class="cov0" title="0">{
+        return slog.Attr{
+                Key:   "error",
+                Value: slog.StringValue(err.Error()),
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package routes
+
+import (
+        "github.com/4uvirik/ProxyForPublicAPI/internal/client"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/handlers"
+        "github.com/labstack/echo/v4"
+)
+
+const PostIDParam = "/:id"
+
+func InitRoutes(e *echo.Echo, h *handlers.Handler) <span class="cov0" title="0">{
+        e.GET(client.UrlEndPointPosts+PostIDParam, h.Proxy)
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package server
+
+import (
+        "github.com/4uvirik/ProxyForPublicAPI/config"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/handlers"
+        "github.com/4uvirik/ProxyForPublicAPI/internal/routes"
+        "github.com/labstack/echo/v4"
+        "log/slog"
+)
+
+func Run(cfg *config.Config, handler *handlers.Handler, logger *slog.Logger) <span class="cov0" title="0">{
+        e := echo.New()
+
+        routes.InitRoutes(e, handler)
+
+        address := cfg.Server.Host + ":" + cfg.Server.Port
+        logger.Info("start server", slog.String("address", address))
+        e.Logger.Fatal(e.Start(address))
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
