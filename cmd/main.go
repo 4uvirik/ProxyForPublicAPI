@@ -8,11 +8,17 @@ import (
 	"github.com/4uvirik/ProxyForPublicAPI/internal/server"
 	"log"
 	"log/slog"
+	"os"
 )
 
 func main() {
 
-	cfg, err := config.MustNew("config/config.yaml")
+	yamlPath := os.Getenv("YAML_PATH")
+	if yamlPath == "" {
+		yamlPath = "config/config.yaml"
+	}
+
+	cfg, err := config.LoadConfig(yamlPath)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
@@ -23,7 +29,7 @@ func main() {
 
 	logger, err := logger.ConfigLogger(cfg.Logger.Level)
 	if err != nil {
-		log.Fatalf("error creating logger: %s", err.Error())
+		log.Fatalf("error creating logger: %v", err)
 	}
 
 	logger.Debug("configuration reading success", slog.Any("cfg", cfg))

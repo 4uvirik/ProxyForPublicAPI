@@ -56,7 +56,7 @@ func loadFromYaml(path string, config *Config) error {
 	return nil
 }
 
-func MustNew(yamlPath string) (*Config, error) {
+func LoadConfig(yamlPath string) (*Config, error) {
 
 	config := &Config{}
 
