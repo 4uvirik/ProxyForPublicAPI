@@ -11,8 +11,11 @@ import (
 	"strconv"
 )
 
+type PostsClient interface {
+	GetPost(ctx context.Context, postID int) (*client.Resp, error)
+}
 type Handler struct {
-	Client *client.Client
+	Client PostsClient
 	Logger *slog.Logger
 	Config *config.Config
 }
