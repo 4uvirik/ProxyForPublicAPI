@@ -59,9 +59,9 @@
 				
 				<option value="file1">github.com/4uvirik/ProxyForPublicAPI/config/config.go (0.0%)</option>
 				
-				<option value="file2">github.com/4uvirik/ProxyForPublicAPI/internal/client/posts_client.go (0.0%)</option>
+				<option value="file2">github.com/4uvirik/ProxyForPublicAPI/internal/client/posts_client.go (73.3%)</option>
 				
-				<option value="file3">github.com/4uvirik/ProxyForPublicAPI/internal/handlers/proxy.go (0.0%)</option>
+				<option value="file3">github.com/4uvirik/ProxyForPublicAPI/internal/handlers/proxy.go (100.0%)</option>
 				
 				<option value="file4">github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogdiscard/logger.go (0.0%)</option>
 				
@@ -71,9 +71,9 @@
 				
 				<option value="file7">github.com/4uvirik/ProxyForPublicAPI/internal/logger/sl/error.go (0.0%)</option>
 				
-				<option value="file8">github.com/4uvirik/ProxyForPublicAPI/internal/routes/routes.go (0.0%)</option>
+				<option value="file8">github.com/4uvirik/ProxyForPublicAPI/internal/routes/routes.go (100.0%)</option>
 				
-				<option value="file9">github.com/4uvirik/ProxyForPublicAPI/internal/server/server.go (0.0%)</option>
+				<option value="file9">github.com/4uvirik/ProxyForPublicAPI/internal/server/server.go (42.9%)</option>
 				
 				</select>
 			</div>
@@ -281,7 +281,7 @@ func NewClient(cfg *config.Config, logger *slog.Logger) *Client <span class="cov
         }</span>
 }
 
-func (c *Client) GetPost(ctx context.Context, postID int) (*Resp, error) <span class="cov0" title="0">{
+func (c *Client) GetPost(ctx context.Context, postID int) (*Resp, error) <span class="cov8" title="1">{
         var response Resp
         url := fmt.Sprintf("%s/%v", UrlEndPointPosts, postID)
 
@@ -289,17 +289,18 @@ func (c *Client) GetPost(ctx context.Context, postID int) (*Resp, error) <span c
                 SetContext(ctx).
                 SetResult(&amp;response).
                 Get(url)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
                 c.logger.Error("request failed", sl.Err(err))
                 return nil, fmt.Errorf("request failed: %w", err)
         }</span>
 
-        <span class="cov0" title="0">if !resp.IsSuccess() </span><span class="cov0" title="0">{
-                c.logger.Error("unexpected status code", sl.Err(err))
-                return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+        <span class="cov8" title="1">if !resp.IsSuccess() </span><span class="cov8" title="1">{
+                errStatus := fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+                c.logger.Error("unexpected status code", sl.Err(errStatus))
+                return nil, errStatus
         }</span>
 
-        <span class="cov0" title="0">return &amp;response, nil</span>
+        <span class="cov8" title="1">return &amp;response, nil</span>
 }
 </pre>
 		
@@ -316,8 +317,11 @@ import (
         "strconv"
 )
 
+type PostsClient interface {
+        GetPost(ctx context.Context, postID int) (*client.Resp, error)
+}
 type Handler struct {
-        Client *client.Client
+        Client PostsClient
         Logger *slog.Logger
         Config *config.Config
 }
@@ -326,30 +330,30 @@ type ErrorResponse struct {
         Message string `json:"message"`
 }
 
-func (h *Handler) Proxy(c echo.Context) error <span class="cov0" title="0">{
+func (h *Handler) Proxy(c echo.Context) error <span class="cov8" title="1">{
 
         ctx, cancel := context.WithTimeout(c.Request().Context(), h.Config.HTTPClient.Timeout)
         defer cancel()
 
         postIDStr := c.Param("id")
-        if postIDStr == "" </span><span class="cov0" title="0">{
+        if postIDStr == "" </span><span class="cov8" title="1">{
                 h.Logger.Warn("no found ID in post")
                 return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Post ID required"})
         }</span>
 
-        <span class="cov0" title="0">postID, err := strconv.Atoi(postIDStr)
-        if err != nil </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">postID, err := strconv.Atoi(postIDStr)
+        if err != nil </span><span class="cov8" title="1">{
                 h.Logger.Warn("invalid ID format", "postID", postIDStr)
                 return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Post ID must be number"})
         }</span>
 
-        <span class="cov0" title="0">post, err := h.Client.GetPost(ctx, postID)
-        if err != nil </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">post, err := h.Client.GetPost(ctx, postID)
+        if err != nil </span><span class="cov8" title="1">{
                 h.Logger.Error("failed to get post", sl.Err(err))
                 return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: "failed to get post"})
         }</span>
 
-        <span class="cov0" title="0">return c.JSON(http.StatusOK, post)</span>
+        <span class="cov8" title="1">return c.JSON(http.StatusOK, post)</span>
 }
 </pre>
 		
@@ -564,7 +568,7 @@ import (
 
 const PostIDParam = "/:id"
 
-func InitRoutes(e *echo.Echo, h *handlers.Handler) <span class="cov0" title="0">{
+func InitRoutes(e *echo.Echo, h *handlers.Handler) <span class="cov8" title="1">{
         e.GET(client.UrlEndPointPosts+PostIDParam, h.Proxy)
 }</span>
 </pre>
@@ -579,10 +583,18 @@ import (
         "log/slog"
 )
 
-func Run(cfg *config.Config, handler *handlers.Handler, logger *slog.Logger) <span class="cov0" title="0">{
+func SetupRouts(handler *handlers.Handler) *echo.Echo <span class="cov8" title="1">{
+
         e := echo.New()
 
         routes.InitRoutes(e, handler)
+
+        return e
+}</span>
+
+func Run(cfg *config.Config, handler *handlers.Handler, logger *slog.Logger) <span class="cov0" title="0">{
+
+        e := SetupRouts(handler)
 
         address := cfg.Server.Host + ":" + cfg.Server.Port
         logger.Info("start server", slog.String("address", address))

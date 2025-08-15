@@ -61,8 +61,9 @@ func (c *Client) GetPost(ctx context.Context, postID int) (*Resp, error) {
 	}
 
 	if !resp.IsSuccess() {
-		c.logger.Error("unexpected status code", sl.Err(err))
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+		errStatus := fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+		c.logger.Error("unexpected status code", sl.Err(errStatus))
+		return nil, errStatus
 	}
 
 	return &response, nil
