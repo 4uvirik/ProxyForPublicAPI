@@ -9,6 +9,7 @@ import (
 	"github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogdiscard"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"strings"
@@ -21,7 +22,7 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
-func makeResponse(status int, body any) *http.Response {
+func makeResponse(status int, body any) (*http.Response, error) {
 	var reader io.Reader
 
 	switch v := body.(type) {
@@ -32,7 +33,7 @@ func makeResponse(status int, body any) *http.Response {
 	default:
 		data, err := json.Marshal(v)
 		if err != nil {
-			panic(fmt.Sprintf("failed marshal body: %v", err))
+			return nil, fmt.Errorf("failed to marshal body: %w", err)
 		}
 		reader = bytes.NewReader(data)
 	}
@@ -40,7 +41,7 @@ func makeResponse(status int, body any) *http.Response {
 		StatusCode: status,
 		Body:       io.NopCloser(reader),
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
-	}
+	}, nil
 }
 
 func TestClient_GetPost(t *testing.T) {
@@ -94,6 +95,10 @@ func TestClient_GetPost(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			resp, err := makeResponse(tt.status, tt.body)
+			require.NoError(t, err)
+
 			httpClient := &http.Client{
 				Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 					assert.Equal(t, http.MethodGet, req.Method)
@@ -103,7 +108,7 @@ func TestClient_GetPost(t *testing.T) {
 					if tt.roundErr != nil {
 						return nil, tt.roundErr
 					}
-					return makeResponse(tt.status, tt.body), nil
+					return resp, nil
 				}),
 			}
 
@@ -122,11 +127,11 @@ func TestClient_GetPost(t *testing.T) {
 			got, err := c.GetPost(context.Background(), 1)
 
 			if tt.expectedErrContains != "" {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErrContains)
 				assert.Nil(t, got)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.expectedResp, got)
 			}
 		})

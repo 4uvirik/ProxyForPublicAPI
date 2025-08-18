@@ -9,6 +9,7 @@ import (
 	"github.com/4uvirik/ProxyForPublicAPI/internal/logger/handler/slogdiscard"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -94,7 +95,7 @@ func TestHandler_Proxy(t *testing.T) {
 			}
 
 			err := h.Proxy(c)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectedCode, rec.Code)
 
@@ -103,11 +104,13 @@ func TestHandler_Proxy(t *testing.T) {
 			switch tt.expectedBody.(type) {
 			case ErrorResponse:
 				var got ErrorResponse
-				_ = json.Unmarshal(rec.Body.Bytes(), &got)
+				err = json.Unmarshal(rec.Body.Bytes(), &got)
+				require.NoError(t, err, "failed to unmarshal error_response body")
 				actualBody = got
 			case client.Resp:
 				var got client.Resp
-				_ = json.Unmarshal(rec.Body.Bytes(), &got)
+				err = json.Unmarshal(rec.Body.Bytes(), &got)
+				require.NoError(t, err, "failed to unmarshal response body")
 				actualBody = got
 			}
 			assert.Equal(t, tt.expectedBody, actualBody)

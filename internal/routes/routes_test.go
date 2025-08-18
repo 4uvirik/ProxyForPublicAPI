@@ -8,15 +8,11 @@ import (
 )
 
 func TestInitRoutes(t *testing.T) {
-
 	h := &handlers.Handler{}
-
 	e := echo.New()
-
 	InitRoutes(e, h)
 
 	routes := e.Routes()
-
 	found := true
 
 	for _, r := range routes {
